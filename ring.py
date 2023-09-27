@@ -8,6 +8,9 @@ import socket
 import logging
 import json
 
+# creazione lista vuota
+messaggi_inviati = []
+messaggi_ricevuti = []
 def sendDataToRing(clientSocket, nextNode, idSorgente, idDestinazione, mess):
     # PROTOTIPO MESSAGGIO: [DATA] JSON MESSAGGIO
     messaggio = {}
@@ -17,7 +20,15 @@ def sendDataToRing(clientSocket, nextNode, idSorgente, idDestinazione, mess):
 
     stringaMessaggio = '[DATA] {}'.format(json.dumps(messaggio))
     logging.debug('Invio Messaggio: {}'.format(stringaMessaggio))
+    
+    # aggiungi messaggio alla lista
+    messaggi_inviati.append({
+    'idSorgente': currNode['id'],
+    'idDestinazione': nextNode['id'],
+    'payload': mess
+    })        
 
+    
     # INVIO MESSAGGIO
     nextNodeAddress = nextNode['addr']
     nextNodePort    = int(nextNode['port'])
@@ -27,7 +38,16 @@ def sendDataToRing(clientSocket, nextNode, idSorgente, idDestinazione, mess):
 class RingPrompt(Cmd):
     prompt = ''
     intro  = 'Benvenuto nel ring. Usa ? per accedere all\'help'
-
+    
+    def do_visualizza_messaggi(self, inp):
+    
+        # Combina i messaggi inviati (messaggi_inviati) e i messaggi ricevuti (messaggi_ricevuti)
+        tutti_messaggi = messaggi_inviati + messaggi_ricevuti
+        
+        # Visualizza i messaggi salvati nella lista messaggi_inviati
+        for messaggio in tutti_messaggi:
+            print("Messaggio da {} a {}: {}".format(messaggio['idSorgente'], messaggio['idDestinazione'], messaggio['payload']))
+    
     def conf(self, socket, nextNode, idSorgente):
         self.socket = socket
         self.nextNode = nextNode
@@ -138,6 +158,14 @@ def receiveMessage(clientSocket, currNode, nextNode, prompt):
                 'CONF' : lambda param1, param2, param3, param4, param5 : updateConfiguration(param1, param2, param3, param4, param5),
                 'DATA' : lambda param1, param2, param3, param4, param5 : decodeData(param1, param2, param3, param4, param5)
             }[command](clientSocket, currNode, nextNode, mess, prompt)
+            
+    # Aggiungi il messaggio ricevuto alla lista messaggi_ricevuti
+   
+    messaggi_ricevuti.append({
+    'idSorgente': currNode['id'],
+    'idDestinazione': nextNode['id'],
+    'payload': mess
+    })        
 
     return action
 
@@ -172,3 +200,5 @@ if __name__ == '__main__':
     # Gestione comunicazione Ring
     while True:
         receiveMessage(clientSocket, currNode, nextNode, prompt)
+      
+
